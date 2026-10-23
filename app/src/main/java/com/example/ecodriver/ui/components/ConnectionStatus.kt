@@ -42,8 +42,9 @@ fun ConnectionStatus(modifier: Modifier = Modifier){
         elmStatus = "Connecting..."
         elmError = null
         elmStatus = try {
-            val socket = connectToElm(context)
-            readObd(socket.inputStream, socket.outputStream)
+            connectToElm(context).use { socket ->
+                readObd(socket.inputStream, socket.outputStream)
+            }
             "Connected"
         } catch (e: Exception) {
             elmError = e.message

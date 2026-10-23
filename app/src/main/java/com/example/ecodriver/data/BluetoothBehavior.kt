@@ -19,5 +19,7 @@ suspend fun connectToElm(context: Context): BluetoothSocket = withContext(Dispat
     // shortcut: picks the first paired device with "OBD" in its name; add a device picker if yours is named differently
     val device = adapter.bondedDevices.firstOrNull { it.name?.contains("OBD", ignoreCase = true) == true }
         ?: error("No paired OBD adapter. Pair it in Android Bluetooth settings first.")
-    device.createRfcommSocketToServiceRecord(SPP_UUID).apply { connect() }
+    device.createRfcommSocketToServiceRecord(SPP_UUID).apply {
+        try { connect() } catch (e: Exception) { close(); throw e }
+    }
 }
