@@ -31,11 +31,6 @@ import com.example.ecodriver.data.readObd
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 
-/*
-Tuesday Demo has this stuck as Connect until Bluetooth is added
- */
-
-
 @Composable
 fun ConnectionStatus(modifier: Modifier = Modifier){
     val context = LocalContext.current.applicationContext

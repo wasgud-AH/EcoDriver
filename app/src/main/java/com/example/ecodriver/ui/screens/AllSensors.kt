@@ -6,6 +6,6 @@ import androidx.compose.ui.graphics.Color
 
 @Composable
 fun AllSensorsScreen(){
-    Text("AllSensorsScreen", color = Color.White);
+    Text("AllSensorsScreen", color = Color.White)
 
 }

@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.ecodriver.data.MenuItemData
+import com.example.ecodriver.ui.components.ConnectionStatus
 import com.example.ecodriver.ui.components.GridMenuItem
 import com.example.ecodriver.ui.navigation.Screens
 
@@ -27,7 +28,7 @@ fun MainMenuScreen(
         MenuItemData("Diagnostic Tools",Screens.DiagnosticTools.route),
         MenuItemData("Vehicle Selector",Screens.VehicleSelector.route),
         MenuItemData("Settings",Screens.Settings.route),
-        MenuItemData("Data Import/Export",Screens.DataExport.route)
+        MenuItemData("Data Management",Screens.DataManagement.route)
     )
 
     LazyVerticalGrid(
@@ -46,4 +47,5 @@ fun MainMenuScreen(
         )
         }
     }
+    ConnectionStatus()
 }

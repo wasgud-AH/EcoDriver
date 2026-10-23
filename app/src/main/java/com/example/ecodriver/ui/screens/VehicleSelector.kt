@@ -6,6 +6,6 @@ import androidx.compose.ui.graphics.Color
 
 @Composable
 fun VehicleSelectorScreen(){
-    Text("DataManagementScreen", color = Color.White);
+    Text("VehicleSelectorScreen", color = Color.White)
 
 }

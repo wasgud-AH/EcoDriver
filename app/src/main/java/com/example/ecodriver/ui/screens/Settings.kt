@@ -6,6 +6,6 @@ import androidx.compose.ui.graphics.Color
 
 @Composable
 fun SettingsScreen(){
-    Text("DataManagementScreen", color = Color.White);
+    Text("SettingsScreen", color = Color.White)
 
 }

@@ -6,6 +6,6 @@ import androidx.compose.ui.graphics.Color
 
 @Composable
 fun DashboardScreen(){
-    Text("DashboardScreen", color = Color.White);
+    Text("DashboardScreen", color = Color.White)
 
 }

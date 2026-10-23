@@ -26,7 +26,8 @@ sealed class Screens(val route: String){
     object DiagnosticTools : Screens("diagnostic_tools")
     object VehicleSelector : Screens("vehicle_selector")
     object Settings : Screens("settings")
-    object DataExport : Screens("data_export")
+
+    object DataManagement : Screens("data_management")
 }
 
 @Composable
@@ -47,7 +48,6 @@ fun EcoDriverNavHost(
             MainMenuScreen(
                 onNavigate = {route -> navHostController.navigate(route)}
             )
-            ConnectionStatus()
         }
 
         composable(Screens.Statistics.route) { StatisticsScreen() }
@@ -57,7 +57,7 @@ fun EcoDriverNavHost(
         composable(Screens.DiagnosticTools.route) { DiagnosticToolsScreen() }
         composable(Screens.VehicleSelector.route) { VehicleSelectorScreen() }
         composable(Screens.Settings.route) { SettingsScreen() }
-        composable(Screens.DataExport.route) { DataManagementScreen() }
+        composable(Screens.DataManagement.route) { DataManagementScreen() }
 
 
     }

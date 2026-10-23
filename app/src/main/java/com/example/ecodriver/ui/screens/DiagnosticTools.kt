@@ -7,6 +7,6 @@ import com.example.ecodriver.ui.navigation.Screens
 
 @Composable
 fun DiagnosticToolsScreen(){
-    Text("DataManagementScreen", color = Color.White);
+    Text("DiagnosticToolsScreen", color = Color.White)
 
 }

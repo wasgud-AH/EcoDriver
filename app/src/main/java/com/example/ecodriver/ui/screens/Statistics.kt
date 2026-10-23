@@ -6,6 +6,6 @@ import androidx.compose.ui.graphics.Color
 
 @Composable
 fun StatisticsScreen(){
-    Text("DataManagementScreen", color = Color.White);
+    Text("StatisticsScreen", color = Color.White)
 
 }
