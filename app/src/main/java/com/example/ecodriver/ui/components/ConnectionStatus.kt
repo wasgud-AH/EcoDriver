@@ -1,6 +1,6 @@
 package com.example.ecodriver.ui.components
 
-import android.widget.Toast
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,13 +19,49 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.ecodriver.ui.theme.ButtonGreen
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.ecodriver.data.connectToElm
+import com.example.ecodriver.data.readObd
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.setValue
 
 /*
 Tuesday Demo has this stuck as Connect until Bluetooth is added
  */
+
+
 @Composable
 fun ConnectionStatus(modifier: Modifier = Modifier){
     val context = LocalContext.current.applicationContext
+    val scope = rememberCoroutineScope()
+    var elmStatus by remember { mutableStateOf("Disconnected") }
+    var elmError by remember { mutableStateOf<String?>(null) }
+
+    fun connect() = scope.launch {
+        elmStatus = "Connecting..."
+        elmError = null
+        elmStatus = try {
+            val socket = connectToElm(context)
+            readObd(socket.inputStream, socket.outputStream)
+            "Connected"
+        } catch (e: Exception) {
+            elmError = e.message
+            "Failed"
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) connect() else elmStatus = "Permission denied" }
+
+
+
     Column(
         modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.Bottom,
@@ -34,11 +70,15 @@ fun ConnectionStatus(modifier: Modifier = Modifier){
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        )
+        {
             Text("ELM connection:", color = Color.White)
-            Text("Disconnected", color = Color.Red)
+            Text(elmStatus, color = if (elmStatus == "Connected") Color.Green else Color.Red)
         }
 
+        elmError?.let {
+            Text(it, color = Color(0xFFFF8A80), modifier = Modifier.fillMaxWidth())
+        }
         Spacer(modifier = Modifier.height(4.dp))
 
         // ECU Status Row
@@ -60,7 +100,9 @@ fun ConnectionStatus(modifier: Modifier = Modifier){
     ) {
 
         Button(onClick = {
-            Toast.makeText(context, "Being implemented Soon!", Toast.LENGTH_SHORT).show()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+            else connect()
         },
             colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen),
 
