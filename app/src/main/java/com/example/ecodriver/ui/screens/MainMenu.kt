@@ -27,7 +27,7 @@ fun MainMenuScreen(
         MenuItemData("Diagnostic Tools",Screens.DiagnosticTools.route),
         MenuItemData("Vehicle Selector",Screens.VehicleSelector.route),
         MenuItemData("Settings",Screens.Settings.route),
-        MenuItemData("Data Import/Export",Screens.DataExport.route)
+        MenuItemData("Data Import/Export",Screens.DataManagement.route)
     )
 
     LazyVerticalGrid(
