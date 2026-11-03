@@ -13,19 +13,34 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.ecodriver.data.runBluetoothObdSession
 import com.example.ecodriver.ui.theme.ButtonGreen
+import kotlinx.coroutines.*
+import androidx.compose.runtime.rememberCoroutineScope
 
 /*
 Tuesday Demo has this stuck as Connect until Bluetooth is added
  */
+
 @Composable
 fun ConnectionStatus(modifier: Modifier = Modifier){
     val context = LocalContext.current.applicationContext
+    val scope = rememberCoroutineScope()
+    var elmStatus by remember { mutableStateOf("Disconnected") }
+    val elmStatusColor = when (elmStatus) {
+        "Connected" -> Color.Green
+        "Connecting" -> Color.Yellow
+        else -> Color.Red
+    }
     Column(
         modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.Bottom,
@@ -36,7 +51,7 @@ fun ConnectionStatus(modifier: Modifier = Modifier){
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("ELM connection:", color = Color.White)
-            Text("Disconnected", color = Color.Red)
+            Text(elmStatus, color = elmStatusColor)
         }
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -60,8 +75,18 @@ fun ConnectionStatus(modifier: Modifier = Modifier){
     ) {
 
         Button(onClick = {
-            Toast.makeText(context, "Being implemented Soon!", Toast.LENGTH_SHORT).show()
+            scope.launch {
+                elmStatus = "Connecting"
+                val ok = runBluetoothObdSession(onConnected = { elmStatus = "Connected" })
+                elmStatus = "Disconnected"
+                Toast.makeText(
+                    context,
+                    if (ok) "OBD session OK" else "OBD session failed",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         },
+            enabled = elmStatus == "Disconnected",
             colors = ButtonDefaults.buttonColors(containerColor = ButtonGreen),
 
             ) {

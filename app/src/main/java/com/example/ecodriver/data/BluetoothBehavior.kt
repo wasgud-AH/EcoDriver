@@ -59,7 +59,7 @@ suspend fun connect(device: BluetoothDevice): BluetoothSocket? =
  * Finds a device, connects, runs readObd, closes the socket
  * Returns true
  */
-suspend fun runBluetoothObdSession(): Boolean = withContext(Dispatchers.IO) {
+suspend fun runBluetoothObdSession(onConnected: () -> Unit = {}): Boolean = withContext(Dispatchers.IO) {
     val device = pickObdDevice()
     if (device == null) {
         Log.e(TAG, "No paired Bluetooth device — pair the ELM327 in Settings first")
@@ -68,6 +68,7 @@ suspend fun runBluetoothObdSession(): Boolean = withContext(Dispatchers.IO) {
     Log.d(TAG, "Using ${device.name} (${device.address})")
 
     val socket = connect(device) ?: return@withContext false
+    onConnected()
 
     try {
         readObd(socket.inputStream, socket.outputStream)
