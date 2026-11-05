@@ -6,8 +6,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ecodriver.ui.screens.MainMenuScreen
+import com.example.ecodriver.ui.screens.SettingsScreen
 import androidx.compose.ui.Modifier
 import com.example.ecodriver.ui.components.ConnectionStatus
+import com.example.ecodriver.ui.ObdViewModel
 
 sealed class Screens(val route: String){
     object MainMenu : Screens("main_menu")
@@ -23,6 +25,7 @@ sealed class Screens(val route: String){
 
 @Composable
 fun EcoDriverNavHost(
+    obdViewModel: ObdViewModel,
     modifier: Modifier = Modifier,
     navHostController: NavHostController = rememberNavController()
 ){
@@ -39,7 +42,10 @@ fun EcoDriverNavHost(
             MainMenuScreen(
                 onNavigate = {route -> navHostController.navigate(route)}
             )
-            ConnectionStatus()
+            ConnectionStatus(obdViewModel)
+        }
+        composable(Screens.Settings.route){
+            SettingsScreen()
         }
     }
 }

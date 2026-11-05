@@ -14,10 +14,18 @@ import com.github.eltonvs.obd.command.control.TroubleCodesCommand
 import com.github.eltonvs.obd.command.control.VINCommand
 import com.github.eltonvs.obd.command.engine.RPMCommand
 import com.github.eltonvs.obd.connection.ObdDeviceConnection
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import java.io.InputStream
 import java.io.OutputStream
 
-/* Not yet implemented */
+// Latest RPM reading, shown by ConnectionStatus
+var rpmText by mutableStateOf("-")
+
 suspend fun readObd(inputStream: InputStream, outputStream: OutputStream) {
     val obdConnection = ObdDeviceConnection(inputStream, outputStream)
 
@@ -30,11 +38,18 @@ suspend fun readObd(inputStream: InputStream, outputStream: OutputStream) {
     obdConnection.run(SetAdaptiveTimingCommand(AdaptiveTimingMode.AUTO_1))
     obdConnection.run(SelectProtocolCommand(ObdProtocols.AUTO))
 
+
+    while(currentCoroutineContext().isActive){
     val rpm = obdConnection.run(RPMCommand())
+    // First command that has to reach the car, not just the adapter
+    ecuStatus = ConnectionState.Connected
+    rpmText = "${rpm.value} ${rpm.unit}"
     val vin = obdConnection.run(VINCommand(), useCache = true)
     val troubleCodes = obdConnection.run(TroubleCodesCommand())
 
     println("RPM: ${rpm.value} ${rpm.unit}")
     println("VIN: ${vin.value}")
     println("DTC: ${troubleCodes.value.ifBlank { "none" }}")
+    delay(250)
+        }
 }

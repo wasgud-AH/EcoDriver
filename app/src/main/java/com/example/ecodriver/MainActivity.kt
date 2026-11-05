@@ -13,9 +13,8 @@ import androidx.compose.ui.Modifier
 import com.example.ecodriver.ui.components.EcoDriverTopBar
 import com.example.ecodriver.ui.navigation.EcoDriverNavHost
 import com.example.ecodriver.ui.theme.EcoDriverTheme
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import com.example.ecodriver.data.runBluetoothObdSession
+import androidx.activity.viewModels
+import com.example.ecodriver.ui.ObdViewModel
 import android.util.Log
 import android.Manifest
 import android.content.pm.PackageManager
@@ -23,11 +22,13 @@ import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 
 class MainActivity : ComponentActivity() {
+    private val obdViewModel: ObdViewModel by viewModels()
+
     private val btPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         Log.d("MainActivity", "BLUETOOTH_CONNECT granted=$granted")
-        if (granted) startObdSession()
+        if (granted)  startObdSession()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,7 +41,7 @@ class MainActivity : ComponentActivity() {
                     containerColor = MaterialTheme.colorScheme.primary,
                     topBar = { EcoDriverTopBar() }
                 ) { innerPadding ->
-                    EcoDriverNavHost(modifier = Modifier.padding(innerPadding))
+                    EcoDriverNavHost(obdViewModel, modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -51,14 +52,14 @@ class MainActivity : ComponentActivity() {
         ) {
             btPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
         } else {
+
             startObdSession()
+
         }
     }
 
     private fun startObdSession() {
-        lifecycleScope.launch {
-            val ok = runBluetoothObdSession()
-            Log.d("MainActivity", if (ok) "OBD session OK" else "OBD session failed")
-        }
+        obdViewModel.connect()
     }
+
 }
