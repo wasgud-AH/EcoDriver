@@ -13,9 +13,11 @@ import com.example.ecodriver.data.MenuItemData
 import com.example.ecodriver.ui.components.ConnectionStatus
 import com.example.ecodriver.ui.components.GridMenuItem
 import com.example.ecodriver.ui.navigation.Screens
+import com.example.ecodriver.ui.ObdViewModel
 
 @Composable
 fun MainMenuScreen(
+    obdViewModel: ObdViewModel,
     modifier: Modifier = Modifier,
     onNavigate: (String) -> Unit) {
 
@@ -47,5 +49,5 @@ fun MainMenuScreen(
         )
         }
     }
-    ConnectionStatus()
+    ConnectionStatus(obdViewModel)
 }
