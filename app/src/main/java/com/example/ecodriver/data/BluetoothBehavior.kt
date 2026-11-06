@@ -43,7 +43,7 @@ fun saveObdAddress(context: Context, address: String?) =
 // Returns phone bluetooth adapter or null
 fun bluetoothAdapter(): BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
 
-/**
+/*
  * Returns the paired device with the saved address
  * Returns null if nothing is saved or that device is no longer paired
  */
