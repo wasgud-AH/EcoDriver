@@ -1,6 +1,8 @@
 package com.example.ecodriver.data
 
+import android.util.Log
 import com.github.eltonvs.obd.command.AdaptiveTimingMode
+import com.github.eltonvs.obd.command.BadResponseException
 import com.github.eltonvs.obd.command.ObdProtocols
 import com.github.eltonvs.obd.command.Switcher
 import com.github.eltonvs.obd.command.at.ResetAdapterCommand
@@ -23,6 +25,8 @@ import kotlinx.coroutines.isActive
 import java.io.InputStream
 import java.io.OutputStream
 
+private const val TAG = "ObdBehavior"
+
 // Latest RPM reading, shown by ConnectionStatus
 var rpmText by mutableStateOf("-")
 
@@ -38,18 +42,31 @@ suspend fun readObd(inputStream: InputStream, outputStream: OutputStream) {
     obdConnection.run(SetAdaptiveTimingCommand(AdaptiveTimingMode.AUTO_1))
     obdConnection.run(SelectProtocolCommand(ObdProtocols.AUTO))
 
+    // First PID makes the adapter search for the car's protocol, which can take ~10 s
+    readOrNull { obdConnection.run(RPMCommand(), maxRetries = 20) }
 
-    while(currentCoroutineContext().isActive){
-    val rpm = obdConnection.run(RPMCommand())
-    // First command that has to reach the car, not just the adapter
-    ecuStatus = ConnectionState.Connected
-    rpmText = "${rpm.value} ${rpm.unit}"
-    val vin = obdConnection.run(VINCommand(), useCache = true)
-    val troubleCodes = obdConnection.run(TroubleCodesCommand())
+    // Read once: these don't change during a drive
+    val vin = readOrNull { obdConnection.run(VINCommand()) }
+    val troubleCodes = readOrNull { obdConnection.run(TroubleCodesCommand()) }
+    Log.d(TAG, "VIN: ${vin?.value ?: "n/a"}, DTC: ${troubleCodes?.value?.ifBlank { "none" } ?: "n/a"}")
 
-    println("RPM: ${rpm.value} ${rpm.unit}")
-    println("VIN: ${vin.value}")
-    println("DTC: ${troubleCodes.value.ifBlank { "none" }}")
-    delay(250)
+    while (currentCoroutineContext().isActive) {
+        val rpm = readOrNull { obdConnection.run(RPMCommand()) }
+        if (rpm != null) {
+            ecuStatus = ConnectionState.Connected
+            rpmText = "${rpm.value} ${rpm.unit}"
+        } else {
+            ecuStatus = ConnectionState.Connecting
         }
+        delay(250)
+    }
+}
+
+// Null when the car answers with an error (NO DATA, UNABLE TO CONNECT...).
+// Socket errors still throw and end the session in runBluetoothObdSession.
+private inline fun <T> readOrNull(block: () -> T): T? = try {
+    block()
+} catch (e: BadResponseException) {
+    Log.w(TAG, "OBD read failed: ${e.message}")
+    null
 }
