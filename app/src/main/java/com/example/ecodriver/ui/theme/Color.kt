@@ -19,3 +19,11 @@ val ButtonGreen = Color(0xFF00E808)
     0x - denotes that its a hex number
     FF - Denotes Alpha Channel number AKA Opacity
  */
+
+/* Dashboard B palette, shared by every screen */
+val Background = Color(0xFF111213)
+val TextPrimary = Color(0xFFF2F2F2)
+val TextSecondary = Color(0xFFB5B5B5)
+val CardBg = Color(0xFF2A2B2E)
+val Amber = Color(0xFFFFB020)
+val Blue = Color(0xFF7CC0FF)

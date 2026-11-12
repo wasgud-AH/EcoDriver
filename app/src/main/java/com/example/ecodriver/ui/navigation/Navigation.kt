@@ -2,6 +2,8 @@ package com.example.ecodriver.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -14,6 +16,7 @@ import com.example.ecodriver.ui.screens.DataManagementScreen
 import com.example.ecodriver.ui.screens.DiagnosticToolsScreen
 import com.example.ecodriver.ui.screens.LiveDataScreen
 import com.example.ecodriver.ui.screens.StatisticsScreen
+import com.example.ecodriver.ui.screens.TripReportScreen
 import com.example.ecodriver.ui.screens.VehicleSelectorScreen
 import com.example.ecodriver.ui.ObdViewModel
 
@@ -28,6 +31,9 @@ sealed class Screens(val route: String){
     object Settings : Screens("settings")
 
     object DataManagement : Screens("data_management")
+    object TripReport : Screens("trip_report/{tripId}") {
+        fun route(tripId: Long) = "trip_report/$tripId"
+    }
 }
 
 @Composable
@@ -52,13 +58,19 @@ fun EcoDriverNavHost(
             )
         }
 
-        composable(Screens.Statistics.route) { StatisticsScreen() }
+        composable(Screens.Statistics.route) {
+            StatisticsScreen(onOpenTrip = { id -> navHostController.navigate(Screens.TripReport.route(id)) })
+        }
+        composable(
+            Screens.TripReport.route,
+            arguments = listOf(navArgument("tripId") { type = NavType.LongType }),
+        ) { entry -> TripReportScreen(entry.arguments?.getLong("tripId") ?: 0L) }
         composable(Screens.Dashboard.route) { DashboardScreen() }
         composable(Screens.LiveData.route) { LiveDataScreen() }
         composable(Screens.AllSensors.route) { AllSensorsScreen() }
         composable(Screens.DiagnosticTools.route) { DiagnosticToolsScreen() }
         composable(Screens.VehicleSelector.route) { VehicleSelectorScreen() }
-        composable(Screens.Settings.route) { SettingsScreen() }
+        composable(Screens.Settings.route) { SettingsScreen(obdViewModel) }
         composable(Screens.DataManagement.route) { DataManagementScreen() }
 
 
