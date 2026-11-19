@@ -10,11 +10,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ecodriver.data.allSensorsOpen
 import com.example.ecodriver.data.obdUnits
 import com.example.ecodriver.data.obdValues
 import com.example.ecodriver.ui.components.CardShape
@@ -27,6 +29,10 @@ import com.example.ecodriver.ui.theme.TextSecondary
 
 @Composable
 fun AllSensorsScreen() {
+    DisposableEffect(Unit){
+        allSensorsOpen = true
+        onDispose { allSensorsOpen = false }
+    }
     AllSensorsContent(obdValues.entries.map { (name, v) -> name to "$v ${obdUnits[name].orEmpty()}".trim() })
 }
 

@@ -40,6 +40,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.github.eltonvs.obd.command.control.DistanceMILOnCommand
+import com.github.eltonvs.obd.command.control.TimeSinceMILOnCommand
+import com.github.eltonvs.obd.command.control.TimingAdvanceCommand
+import com.github.eltonvs.obd.command.egr.CommandedEgrCommand
+import com.github.eltonvs.obd.command.egr.EgrErrorCommand
+import com.github.eltonvs.obd.command.engine.AbsoluteLoadCommand
+import com.github.eltonvs.obd.command.engine.RelativeThrottlePositionCommand
+import com.github.eltonvs.obd.command.engine.RuntimeCommand
+import com.github.eltonvs.obd.command.fuel.CommandedEquivalenceRatioCommand
+import com.github.eltonvs.obd.command.fuel.EthanolLevelCommand
+import com.github.eltonvs.obd.command.fuel.FuelLevelCommand
+import com.github.eltonvs.obd.command.fuel.FuelTypeCommand
+import com.github.eltonvs.obd.command.pressure.BarometricPressureCommand
+import com.github.eltonvs.obd.command.pressure.FuelPressureCommand
+import com.github.eltonvs.obd.command.pressure.FuelRailGaugePressureCommand
+import com.github.eltonvs.obd.command.pressure.FuelRailPressureCommand
+import com.github.eltonvs.obd.command.temperature.AirIntakeTemperatureCommand
+import com.github.eltonvs.obd.command.temperature.AmbientAirTemperatureCommand
+import com.github.eltonvs.obd.command.temperature.OilTemperatureCommand
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -49,6 +68,8 @@ import java.io.InputStream
 import java.io.OutputStream
 
 private const val TAG = "ObdBehavior"
+
+var allSensorsOpen by mutableStateOf(false)
 
 // Latest RPM reading, shown by ConnectionStatus
 var rpmText by mutableStateOf("-")
@@ -63,6 +84,11 @@ private val fastCommands = listOf(
     RPMCommand(), SpeedCommand(), ThrottlePositionCommand(),
     MassAirFlowCommand(), FuelConsumptionRateCommand(),
 )
+
+// Failed reads in a row per command. At MAX_FAILS a PID is skipped until the next retry.
+private const val MAX_FAILS = 3
+private const val RETRY_SKIPPED_MS = 60_000L
+private val failures = mutableMapOf<String, Int>()
 
 // Read at session start and on DiagRequest: these don't change during a drive
 private val onceCommands = listOf(
@@ -84,12 +110,32 @@ private val slowCommands = listOf(
     ModuleVoltageCommand(),
 )
 
+//These variables are used when tapping on the All Sensors screen, in which the extra OBD PIDS
+//that aren't used for MPG calulations to be present should the user want that information.
+//We use the Extras Delay in order to avoid incurring the additional overhead from the loop needing to
+//check all the extra PIDS just in case the user accidentally taps on the All Sensors screen.
+
+private const val EXTRAS_PER_LOOP = 2
+private const val EXTRAS_DELAY_MS = 3_000L
+private val extraCommands = listOf(
+    FuelTypeCommand(), DistanceMILOnCommand(), TimeSinceMILOnCommand(),
+    AirIntakeTemperatureCommand(), AmbientAirTemperatureCommand(), OilTemperatureCommand(),
+    FuelLevelCommand(), EthanolLevelCommand(), FuelPressureCommand(),
+    FuelRailPressureCommand(), FuelRailGaugePressureCommand(),
+    FuelTrimCommand(FuelTrimBank.SHORT_TERM_BANK_2), FuelTrimCommand(FuelTrimBank.LONG_TERM_BANK_2),
+    AbsoluteLoadCommand(), RelativeThrottlePositionCommand(), RuntimeCommand(),
+    TimingAdvanceCommand(), BarometricPressureCommand(),
+    CommandedEquivalenceRatioCommand(), CommandedEgrCommand(), EgrErrorCommand(),
+)
+
+
 suspend fun readObd(inputStream: InputStream, outputStream: OutputStream) {
     TripState.reset(SystemClock.elapsedRealtime())
     TripRecorder.start()
     obdValues.clear()
     obdNumbers.clear()
     obdUnits.clear()
+    failures.clear()
     val obdConnection = ObdDeviceConnection(inputStream, outputStream)
 
     // Recommended low-noise ELM327 setup
@@ -108,13 +154,41 @@ suspend fun readObd(inputStream: InputStream, outputStream: OutputStream) {
     Log.d(TAG, "VIN: ${obdValues[Pid.VIN] ?: "n/a"}, DTC: ${obdValues[Pid.DTC_STORED]?.ifBlank { "none" } ?: "n/a"}")
 
     var loop = 0
+    var lastRetryMs = 0L // 0 until the first full loop has filled in the values
+
+    //These variables are only used when the user's seeing all Sensors
+    var extraIndex = 0
+    var sensorsOpenedMs = 0L
+
     try {
         while (currentCoroutineContext().isActive) {
             val readings = fastCommands.map { readInto(obdConnection, it) }
             if (loop++ % SLOW_EVERY_N_LOOPS == 0) slowCommands.forEach { readInto(obdConnection, it) }
+
+            if(allSensorsOpen){
+                val t = SystemClock.elapsedRealtime()
+                if(sensorsOpenedMs == 0L) sensorsOpenedMs = t
+                if(t - sensorsOpenedMs >= EXTRAS_DELAY_MS) repeat(EXTRAS_PER_LOOP){
+                    readInto(obdConnection,extraCommands[extraIndex++ % extraCommands.size])
+                }
+            } else if(sensorsOpenedMs != 0L){
+                sensorsOpenedMs = 0L
+                extraCommands.forEach {
+                    obdValues.remove(it.name); obdNumbers.remove(it.name); obdUnits.remove(it.name)
+                    }
+                }
+
             val rpmOk = readings.first() != null // RPM is first in fastCommands
             ecuStatus = if (rpmOk) ConnectionState.Connected else ConnectionState.Connecting
             val nowMs = SystemClock.elapsedRealtime()
+            if (lastRetryMs == 0L) {
+                lastRetryMs = nowMs
+            } else if (nowMs - lastRetryMs >= RETRY_SKIPPED_MS) {
+                // One more try each: a PID that fails again goes straight back to skipped
+                failures.replaceAll { _, n -> minOf(n, MAX_FAILS - 1) }
+                lastRetryMs = nowMs
+                Log.d(TAG, "Retrying skipped PIDs")
+            }
             TripState.update(nowMs)
             TripRecorder.tick(nowMs)
             diagRequest?.let { handleDiag(obdConnection, it); diagRequest = null }
@@ -130,6 +204,7 @@ suspend fun readObd(inputStream: InputStream, outputStream: OutputStream) {
 private suspend fun readOnceCommands(connection: ObdDeviceConnection) = onceCommands.forEach {
     obdValues.remove(it.name)
     obdNumbers.remove(it.name)
+    failures.remove(it.name) // a Rescan always asks again
     readInto(connection, it)
 }
 
@@ -143,7 +218,18 @@ private suspend fun handleDiag(connection: ObdDeviceConnection, request: DiagReq
 
 // Stores the reading in obdValues/obdNumbers. Null when the read fails.
 private suspend fun readInto(connection: ObdDeviceConnection, cmd: ObdCommand): ObdResponse? {
-    val r = readOrNull { connection.run(cmd) } ?: return null
+    val fails = failures[cmd.name] ?: 0
+    if (fails >= MAX_FAILS) return null
+    val r = readOrNull { connection.run(cmd) }
+    if (r == null) {
+        // RPM is never skipped: the loop uses it to tell whether the car is answering
+        if (cmd !is RPMCommand) {
+            failures[cmd.name] = fails + 1
+            if (fails + 1 == MAX_FAILS) Log.d(TAG, "Skipping ${cmd.name} after $MAX_FAILS failed reads")
+        }
+        return null
+    }
+    failures.remove(cmd.name)
     obdValues[cmd.name] = r.value
     obdUnits[cmd.name] = r.unit
     r.value.toDoubleOrNull()?.let { obdNumbers[cmd.name] = it }
