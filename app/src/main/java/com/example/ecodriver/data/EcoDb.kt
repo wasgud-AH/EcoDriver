@@ -134,7 +134,7 @@ interface EventDao {
     @Query("SELECT COUNT(*) FROM Event") fun count(): Flow<Int>
 }
 
-@Database(entities = [Vehicle::class, Trip::class, Sample::class, Event::class], version = 1, exportSchema = false)
+@Database(entities = [Vehicle::class, Trip::class, Sample::class, Event::class], version = 1, exportSchema = true)
 abstract class EcoDb : RoomDatabase() {
     abstract fun vehicles(): VehicleDao
     abstract fun trips(): TripDao
